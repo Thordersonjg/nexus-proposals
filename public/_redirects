@@ -1,0 +1,5 @@
+# Cloudflare Pages redirects
+# Static proposals (demo, lucas) are served directly from pre-built HTML.
+# Unknown proposal short codes fall through to the dynamic loader page.
+# Cloudflare Pages checks for existing static files first before applying redirects.
+/p/*  /proposal/index.html  200

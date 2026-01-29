@@ -1,20 +1,23 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
 
 interface AnalyticsTrackerProps {
   proposalId: string
+  shortCode?: string
 }
 
-export function AnalyticsTracker({ proposalId }: AnalyticsTrackerProps) {
+export function AnalyticsTracker({ proposalId, shortCode }: AnalyticsTrackerProps) {
   const hasTrackedView = useRef(false)
   const sectionTimes = useRef<Record<string, number>>({})
+  const resolvedShortCode = shortCode || proposalId
 
   useEffect(() => {
     // Track initial page view
     if (!hasTrackedView.current) {
       hasTrackedView.current = true
-      trackEvent('proposal_opened', {
+      trackEvent('proposal_opened', resolvedShortCode, {
         proposalId,
         timestamp: new Date().toISOString(),
         referrer: document.referrer,
@@ -26,7 +29,7 @@ export function AnalyticsTracker({ proposalId }: AnalyticsTrackerProps) {
     const startTime = Date.now()
     const handleUnload = () => {
       const timeSpent = Math.round((Date.now() - startTime) / 1000)
-      trackEvent('proposal_closed', {
+      trackEvent('proposal_closed', resolvedShortCode, {
         proposalId,
         timeSpentSeconds: timeSpent,
         sectionTimes: sectionTimes.current,
@@ -44,17 +47,15 @@ export function AnalyticsTracker({ proposalId }: AnalyticsTrackerProps) {
         entries.forEach((entry) => {
           const sectionId = entry.target.id
           if (entry.isIntersecting) {
-            // Section came into view
             if (!sectionStartTimes[sectionId]) {
               sectionStartTimes[sectionId] = Date.now()
-              trackEvent('section_viewed', {
+              trackEvent('section_viewed', resolvedShortCode, {
                 proposalId,
                 section: sectionId,
                 timestamp: new Date().toISOString(),
               })
             }
           } else {
-            // Section left view
             if (sectionStartTimes[sectionId]) {
               const timeSpent = Math.round(
                 (Date.now() - sectionStartTimes[sectionId]!) / 1000
@@ -69,7 +70,6 @@ export function AnalyticsTracker({ proposalId }: AnalyticsTrackerProps) {
       { threshold: 0.5 }
     )
 
-    // Observe all sections
     sections.forEach((sectionId) => {
       const element = document.getElementById(sectionId)
       if (element) {
@@ -81,41 +81,46 @@ export function AnalyticsTracker({ proposalId }: AnalyticsTrackerProps) {
       window.removeEventListener('beforeunload', handleUnload)
       observer.disconnect()
     }
-  }, [proposalId])
+  }, [proposalId, resolvedShortCode])
 
   return null
 }
 
-// Analytics event tracker
-// For now, just logs to console. Later, send to Supabase or API.
-function trackEvent(eventType: string, data: Record<string, unknown>) {
-  const event = {
-    type: eventType,
-    ...data,
-  }
-
-  // Log to console in development
+function trackEvent(
+  eventType: string,
+  shortCode: string,
+  data: Record<string, unknown>
+) {
+  // Log in development
   if (process.env.NODE_ENV === 'development') {
-    console.log('[Analytics]', event)
+    console.log('[Analytics]', { type: eventType, ...data })
   }
 
-  // In production, this would send to an API endpoint
-  // Example:
-  // fetch('/api/analytics', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(event),
-  // }).catch(() => {})
-
-  // For now, store in localStorage for demo purposes
+  // Store in localStorage as backup
   try {
     const stored = localStorage.getItem('nexus_analytics') || '[]'
     const events = JSON.parse(stored)
-    events.push({ ...event, timestamp: new Date().toISOString() })
-    // Keep only last 100 events
+    events.push({ type: eventType, ...data, timestamp: new Date().toISOString() })
     if (events.length > 100) events.shift()
     localStorage.setItem('nexus_analytics', JSON.stringify(events))
   } catch {
     // Ignore storage errors
+  }
+
+  // Send to Supabase (fire-and-forget)
+  if (supabase) {
+    try {
+      supabase
+        .from('analytics_events')
+        .insert({
+          proposal_short_code: shortCode,
+          event_type: eventType,
+          event_data: data,
+          user_agent: navigator.userAgent,
+        })
+        .then(() => {})
+    } catch {
+      // Analytics should never break the page
+    }
   }
 }
