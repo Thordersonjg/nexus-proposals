@@ -1,4 +1,5 @@
 import { demoProposal } from '@/data/demo-proposal'
+import { lucasProposal } from '@/data/lucas-proposal'
 import { HeroSection } from '@/components/proposal/hero-section'
 import { SummarySection } from '@/components/proposal/summary-section'
 import { ServicesSection } from '@/components/proposal/services-section'
@@ -7,6 +8,13 @@ import { TimelineSection } from '@/components/proposal/timeline-section'
 import { CTASection } from '@/components/proposal/cta-section'
 import { AnalyticsTracker } from '@/components/proposal/analytics-tracker'
 import { Separator } from '@/components/ui/separator'
+import type { Proposal } from '@/types/proposal'
+
+// Proposal registry - add new proposals here
+const proposals: Record<string, Proposal> = {
+  demo: demoProposal,
+  lucas: lucasProposal,
+}
 
 interface ProposalPageProps {
   params: {
@@ -15,9 +23,7 @@ interface ProposalPageProps {
 }
 
 export default function ProposalPage({ params }: ProposalPageProps) {
-  // For now, always return the demo proposal
-  // Later this will fetch from Supabase based on params.id
-  const proposal = demoProposal
+  const proposal = proposals[params.id] || demoProposal
 
   return (
     <main className="min-h-screen">
@@ -63,13 +69,13 @@ export default function ProposalPage({ params }: ProposalPageProps) {
 }
 
 export async function generateStaticParams() {
-  // For static export, pre-generate the demo page
-  return [{ id: 'demo' }]
+  return Object.keys(proposals).map((id) => ({ id }))
 }
 
 export function generateMetadata({ params }: ProposalPageProps) {
+  const proposal = proposals[params.id] || demoProposal
   return {
-    title: `Proposal for ${demoProposal.companyName} | Nexus`,
-    description: demoProposal.content.hero.subheadline,
+    title: `Proposal for ${proposal.companyName} | Nexus`,
+    description: proposal.content.hero.subheadline,
   }
 }
