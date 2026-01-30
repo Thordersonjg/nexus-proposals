@@ -1,5 +1,5 @@
-# Cloudflare Pages redirects
-# Static proposals (demo, lucas) are served directly from pre-built HTML.
-# Unknown proposal short codes fall through to the dynamic loader page.
-# Cloudflare Pages checks for existing static files first before applying redirects.
-/p/*  /proposal/index.html  200
+# No redirects needed.
+# Cloudflare Pages automatically:
+# 1. Serves static files (e.g. /p/demo/ -> /p/demo/index.html)
+# 2. Serves 404.html for unmatched paths (e.g. /p/lucas-test -> 404.html)
+# The custom not-found.tsx detects /p/* paths and loads from Supabase dynamically.
