@@ -36,6 +36,9 @@ export function ProposalView({ proposal }: ProposalViewProps) {
       <CTASection
         cta={proposal.content.cta}
         validUntil={proposal.validUntil}
+        proposalId={proposal.id}
+        shortCode={proposal.shortCode}
+        currentStatus={proposal.status}
       />
 
       <footer className="py-12 px-6 bg-slate-900 text-white">

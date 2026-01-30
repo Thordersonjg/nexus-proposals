@@ -48,6 +48,7 @@ export interface ProposalCTA {
   headline: string
   primaryButton: string
   secondaryButton?: string
+  contactEmail?: string
 }
 
 export interface ProposalContent {
